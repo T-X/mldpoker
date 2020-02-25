@@ -1,0 +1,1 @@
+#define CHECK_INTERVAL 1
