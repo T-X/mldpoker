@@ -46,6 +46,10 @@
 	.s6_addr32[3] = __constant_htonl(0x00000001), \
 }
 
+/*
+ * MLD maximum response delay, in msec */
+#define MLDMAXDELAY 1000
+
 struct mldquery_pkt {
 	struct ethhdr ethhdr;
 	struct ip6_hdr ip6hdr;
@@ -258,7 +262,6 @@ struct mldquery_pkt *get_mldquery_pkt(const char *ifname, struct mldquery_pkt *m
 {
 	struct ether_addr brmac;
 	struct in6_addr brip6;
-	uint16_t chksum;
 
 	if (get_brmac(ifname, &brmac) < 0)
 		return NULL;
@@ -270,17 +273,25 @@ struct mldquery_pkt *get_mldquery_pkt(const char *ifname, struct mldquery_pkt *m
 	memcpy(&mldquery_pkt->ethhdr.h_source, &brmac, ETH_ALEN);
 	memcpy(&mldquery_pkt->ip6hdr.ip6_src, &brip6,
 	       sizeof(mldquery_pkt->ip6hdr.ip6_src));
+
+	return mldquery_pkt;
+}
+
+void update_mld_maxdelay(struct mldquery_pkt *mldquery_pkt, uint16_t maxdelay)
+{
+	uint16_t chksum;
+
+	mldquery_pkt->mldhdr.mld_maxdelay = htons(maxdelay);
+	mldquery_pkt->mldhdr.mld_cksum = 0;
 	chksum = in_chksum((void *)&mldquery_pkt->ip6hdr,
 			   (void *)&mldquery_pkt->mldhdr,
 			   sizeof(mldquery_pkt->mldhdr),
 			   IPPROTO_ICMPV6);
 	mldquery_pkt->mldhdr.mld_cksum = chksum;
-
-	return mldquery_pkt;
 }
 
-int mld_poker(int sd, const int ifindex, struct ether_addr *addr,
-	      struct mldquery_pkt *mldquery_pkt)
+static int mld_poker(int sd, const int ifindex, struct ether_addr *addr,
+		     uint16_t maxdelay, struct mldquery_pkt *mldquery_pkt)
 {
 	const char *addrstr = ether_ntoa(addr);
 	struct sockaddr_ll sock_dst;
@@ -290,6 +301,8 @@ int mld_poker(int sd, const int ifindex, struct ether_addr *addr,
 	memset(&sock_dst, 0, sizeof(sock_dst));
 	sock_dst.sll_ifindex = ifindex;
 	memcpy(&mldquery_pkt->ethhdr.h_dest, addr, ETH_ALEN);
+
+	update_mld_maxdelay(mldquery_pkt, maxdelay);
 
 	ret = sendto(sd, mldquery_pkt, sizeof(*mldquery_pkt), 0,
 		     (struct sockaddr*)&sock_dst, sizeof(sock_dst));
@@ -355,6 +368,7 @@ int main(int argc, char *argv[])
 	struct hlist_head *neigh_list;
 	struct neigh_list *neigh;
 	const char *ifname;
+	uint16_t maxdelay;
 	int ifindex;
 	int ret = 1, ret2, sd;
 
@@ -391,7 +405,9 @@ int main(int argc, char *argv[])
 			goto err;
 
 		hlist_for_each_entry(neigh, neigh_list, active_list) {
-			if (mld_poker(sd, ifindex, &neigh->addr,
+			maxdelay = neigh->num_tx ? MLDMAXDELAY : 0;
+
+			if (mld_poker(sd, ifindex, &neigh->addr, maxdelay,
 				      &mldquery_pkt) < 0)
 				goto err;
 		}

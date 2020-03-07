@@ -44,10 +44,22 @@ static void neigh_age_entries(void)
 		neigh->last_seen++;
 
 		if (neigh->last_seen > SLUMBER_TIME) {
+			hlist_del(&neigh->active_list);
 			hlist_del(&neigh->list);
 			free(neigh);
 		}
 	}
+}
+
+static void neigh_update_num_tx(void)
+{
+	struct neigh_list *neigh;
+	struct hlist_node *neigh_tmp;
+
+	hlist_for_each_entry_safe(neigh, neigh_tmp, &neigh_active_list,
+				  active_list)
+		if (++(neigh->num_tx) > 1)
+			hlist_del(&neigh->active_list);
 }
 
 static int neigh_add_entry(struct ether_addr *addr)
@@ -59,9 +71,11 @@ static int neigh_add_entry(struct ether_addr *addr)
 
 	neigh->addr = *addr;
 	neigh->last_seen = 0;
+	neigh->num_tx = 0;
 
 	hlist_add_head(&neigh->list, &neigh_list);
 	hlist_add_head(&neigh->active_list, &neigh_active_list);
+
 	return 0;
 }
 
@@ -170,7 +184,7 @@ err:
 
 struct hlist_head *neigh_get_active(const int ifindex)
 {
-	INIT_HLIST_HEAD(&neigh_active_list);
+	neigh_update_num_tx();
 	neigh_age_entries();
 
 	if (neigh_brport_get(ifindex) < 0)
@@ -197,6 +211,7 @@ void neigh_free(void)
 	struct hlist_node *neigh_tmp;
 
 	hlist_for_each_entry_safe(neigh, neigh_tmp, &neigh_list, list) {
+		hlist_del(&neigh->active_list);
 		hlist_del(&neigh->list);
 		free(neigh);
 	}

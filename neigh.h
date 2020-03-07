@@ -14,6 +14,7 @@
 struct neigh_list {
 	struct ether_addr addr;
 	unsigned long last_seen;
+	unsigned short num_tx;
 	struct hlist_node list;
 	struct hlist_node active_list;
 };
