@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+// SPDX-License-Identifier: MIT
 /* MLD Poker - A small utility that pokes sleepy devices for MLD Reports
  *
  * Copyright (c) 2020 Linus Lüssing <linus.luessing@c0d3.blue>
@@ -33,11 +33,13 @@
 
 #define ETH_STRLEN strlen("00:00:00:00:00:00")
 #define ETH_ZERO { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
+
 #define IN6_ZERO \
 { \
 	.s6_addr32[0] = 0, .s6_addr32[1] = 0, \
 	.s6_addr32[2] = 0, .s6_addr32[3] = 0, \
 }
+
 #define IN6_MC_ALL_NODES \
 { \
 	.s6_addr32[0] = __constant_htonl(0xff020000), \
@@ -46,16 +48,20 @@
 	.s6_addr32[3] = __constant_htonl(0x00000001), \
 }
 
+#define SNOOP_FMT "/sys/class/net/%s/brport/bridge/bridge/multicast_snooping"
+#define QUERIER_FMT "/sys/class/net/%s/brport/bridge/bridge/multicast_querier"
+
 /*
- * MLD maximum response delay, in msec */
+ * MLD maximum response delay, in msec
+ */
 #define MLDMAXDELAY 1000
 
 struct mldquery_pkt {
 	struct ethhdr ethhdr;
 	struct ip6_hdr ip6hdr;
-        struct ip6_hbh hbh; 
-        struct ip6_opt_router rtr_alert;
-        struct ip6_opt pad1;
+	struct ip6_hbh hbh;
+	struct ip6_opt_router rtr_alert;
+	struct ip6_opt pad1;
 	struct mld_hdr mldhdr;
 } __attribute__((__packed__));
 
@@ -76,18 +82,18 @@ const struct mldquery_pkt __mldquery_pkt = {
 		.ip6_src = IN6_ZERO,
 		.ip6_dst = IN6_MC_ALL_NODES,
 	},
-        .hbh = {
+	.hbh = {
 		.ip6h_nxt = IPPROTO_ICMPV6,
-		.ip6h_len = 0, 
+		.ip6h_len = 0,
 	},
 	.rtr_alert = {
 		.ip6or_type = IP6OPT_ROUTER_ALERT,
-		.ip6or_len = 2, 
+		.ip6or_len = 2,
 		.ip6or_value = IP6_ALERT_MLD,
 	},
- 	.pad1 = {
+	.pad1 = {
 		.ip6o_type = IP6OPT_PAD1,
-		.ip6o_len = 0, 
+		.ip6o_len = 0,
 	},
 	.mldhdr = {
 		.mld_type = MLD_LISTENER_QUERY,
@@ -118,7 +124,8 @@ static int open_socket(const char *ifname)
 		return -EINVAL;
 	}
 
-	if (setsockopt(sd, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+	if (setsockopt(sd, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr,
+		       sizeof(ifr)) < 0) {
 		close(sd);
 		fprintf(stderr, "Error: Could not bind socket to %s\n", ifname);
 		return -EINVAL;
@@ -127,7 +134,8 @@ static int open_socket(const char *ifname)
 	return sd;
 }
 
-static int read_br_param(const char *pathfmt, const char *ifname, char *dst, size_t dst_len)
+static int read_br_param(const char *pathfmt, const char *ifname, char *dst,
+			 size_t dst_len)
 {
 	char pathname[128];
 	FILE *file;
@@ -149,7 +157,6 @@ static int read_br_param(const char *pathfmt, const char *ifname, char *dst, siz
 	}
 
 	fclose(file);
-
 }
 
 static int get_brmac(const char *ifname, struct ether_addr *brmac)
@@ -228,8 +235,8 @@ int get_br_ipv6_lladdr(const char *ifname, struct in6_addr *brip6)
 		return ret;
 	}
 
-	for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
-		if (ifa->ifa_addr == NULL)
+	for (ifa = ifaddr, n = 0; ifa; ifa = ifa->ifa_next, n++) {
+		if (!ifa->ifa_addr)
 			continue;
 
 		if (ifa->ifa_addr->sa_family != AF_INET6)
@@ -258,7 +265,8 @@ int get_br_ipv6_lladdr(const char *ifname, struct in6_addr *brip6)
 	return ret;
 }
 
-struct mldquery_pkt *get_mldquery_pkt(const char *ifname, struct mldquery_pkt *mldquery_pkt)
+struct mldquery_pkt *get_mldquery_pkt(const char *ifname,
+				      struct mldquery_pkt *mldquery_pkt)
 {
 	struct ether_addr brmac;
 	struct in6_addr brip6;
@@ -305,7 +313,7 @@ static int mld_poker(int sd, const int ifindex, struct ether_addr *addr,
 	update_mld_maxdelay(mldquery_pkt, maxdelay);
 
 	ret = sendto(sd, mldquery_pkt, sizeof(*mldquery_pkt), 0,
-		     (struct sockaddr*)&sock_dst, sizeof(sock_dst));
+		     (struct sockaddr *)&sock_dst, sizeof(sock_dst));
 	if (ret < 0) {
 		dstaddr = ether_ntoa(addr);
 		fprintf(stderr, "Error: Could send packet to %s\n",
@@ -323,8 +331,7 @@ int br_querier_off(const char *ifname)
 	long snooping, querier;
 	int ret;
 
-	ret = read_br_param("/sys/class/net/%s/brport/bridge/bridge/multicast_snooping", ifname,
-			    strbuff, sizeof(strbuff));
+	ret = read_br_param(SNOOP_FMT, ifname, strbuff, sizeof(strbuff));
 	if (ret < 0)
 		return ret;
 
@@ -341,8 +348,7 @@ int br_querier_off(const char *ifname)
 		return -EBUSY;
 	}
 
-	ret = read_br_param("/sys/class/net/%s/brport/bridge/bridge/multicast_querier", ifname,
-			    strbuff, sizeof(strbuff));
+	ret = read_br_param(QUERIER_FMT, ifname, strbuff, sizeof(strbuff));
 	if (ret < 0)
 		return ret;
 
@@ -393,7 +399,7 @@ int main(int argc, char *argv[])
 	if (!get_mldquery_pkt(ifname, &mldquery_pkt))
 		goto err;
 
-	while(1) {
+	while (1) {
 		neigh_list = neigh_get_active(ifindex);
 		if (!neigh_list)
 			goto err;

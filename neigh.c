@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+// SPDX-License-Identifier: MIT
 /* MLD Poker - A small utility that pokes sleepy devices for MLD Reports
  *
  * Copyright (c) 2020 Linus Lüssing <linus.luessing@c0d3.blue>
@@ -29,6 +29,7 @@ static unsigned int filter_index;
 static int neigh_brport_filter(struct nlmsghdr *nlh, int reqlen)
 {
 	struct ndmsg *ndm = NLMSG_DATA(nlh);
+
 	ndm->ndm_ifindex = filter_index;
 	return 0;
 }
@@ -58,7 +59,7 @@ static void neigh_update_num_tx(void)
 
 	hlist_for_each_entry_safe(neigh, neigh_tmp, &neigh_active_list,
 				  active_list)
-		if (++(neigh->num_tx) > 1)
+		if (++neigh->num_tx > 1)
 			hlist_del(&neigh->active_list);
 }
 
@@ -110,7 +111,7 @@ static int neigh_update_rtnl(struct nlmsghdr *n, void *arg)
 	struct ndmsg *r = NLMSG_DATA(n);
 	int len = n->nlmsg_len;
 	unsigned int last_seen;
-	struct rtattr *tb[NDA_MAX+1];
+	struct rtattr *tb[NDA_MAX + 1];
 
 	if (n->nlmsg_type != RTM_NEWNEIGH && n->nlmsg_type != RTM_DELNEIGH) {
 		fprintf(stderr, "Not RTM_NEWNEIGH: %08x %08x %08x\n",
@@ -152,8 +153,6 @@ static int neigh_update_rtnl(struct nlmsghdr *n, void *arg)
 	return 0;
 }
 
-
-
 static int neigh_brport_get(const int ifindex)
 {
 	struct rtnl_handle rth = { .fd = -1 };
@@ -178,7 +177,7 @@ static int neigh_brport_get(const int ifindex)
 
 err:
 	rtnl_close(&rth);
-	
+
 	return ret;
 }
 
