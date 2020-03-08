@@ -25,8 +25,14 @@
 #include <linux/fib_rules.h>
 #include <linux/if_addrlabel.h>
 #include <linux/if_bridge.h>
+#include <linux/netlink.h>
 
 #include "libnetlink.h"
+
+/* Linux < v4.20 */
+#ifndef NETLINK_GET_STRICT_CHK
+#define NETLINK_GET_STRICT_CHK 12
+#endif
 
 #define __aligned(x)		__attribute__((aligned(x)))
 
