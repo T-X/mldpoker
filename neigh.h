@@ -6,6 +6,9 @@
  * License-Filename: LICENSES/preferred/MIT
  */
 
+#ifndef __MLDPOKER_NEIGH_H__
+#define __MLDPOKER_NEIGH_H__
+
 #include <net/ethernet.h>
 #include "list.h"
 
@@ -22,3 +25,5 @@ struct neigh_list {
 struct hlist_head *neigh_get_active(const int ifindex);
 int neigh_init(void);
 void neigh_free(void);
+
+#endif /* __MLDPOKER_NEIGH_H__ */
