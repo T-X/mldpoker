@@ -25,7 +25,6 @@
  * From: ipv6toolkit / libipv6
  */
 
-#include <linux/in6.h>
 #include <inttypes.h>
 #include <netinet/ip6.h>
 #include <stddef.h>
