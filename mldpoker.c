@@ -208,6 +208,7 @@ int get_br_ifindex(const char *ifname)
 	if (ret < 0)
 		return ret;
 
+	errno = 0;
 	ifindex = strtol(ifindexstr, &endptr, 10);
 	if (errno != 0 || ifindex > UINT32_MAX || ifindex < 0 ||
 	    endptr == ifindexstr) {
@@ -335,6 +336,7 @@ int br_querier_off(const char *ifname)
 	if (ret < 0)
 		return ret;
 
+	errno = 0;
 	snooping = strtol(strbuff, &endptr, 10);
 	if (errno != 0 || snooping > UINT32_MAX || snooping < 0 ||
 	    endptr == strbuff) {
@@ -352,6 +354,7 @@ int br_querier_off(const char *ifname)
 	if (ret < 0)
 		return ret;
 
+	errno = 0;
 	querier = strtol(strbuff, &endptr, 10);
 	if (errno != 0 || querier > UINT32_MAX || querier < 0 ||
 	    endptr == strbuff) {
