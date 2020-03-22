@@ -6,6 +6,8 @@
 # License-Filename: LICENSES/preferred/MIT
 #
 
+CFLAGS = -Iinclude
+
 mldpoker: mldpoker.o chksum.o neigh.o libnetlink.o
 
 mldpoker.o: mldpoker.c neigh.h chksum.h list.h
